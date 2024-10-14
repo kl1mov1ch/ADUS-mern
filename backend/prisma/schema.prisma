@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  email          String           @unique
+  password       String
+  name           String?
+  avatarUrl      String?
+  dateOfBirth    DateTime?
+  role           Role             @default(STUDENT)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  bio            String?
+  location       String?
+  tests          Test[]           @relation("TestTeacher")
+  grades         Grade[]          @relation("StudentGrades")
+  Answer         Answer[]
+  TestAssignment TestAssignment[]
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+model Test {
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  teacher     User             @relation("TestTeacher", fields: [teacherId], references: [id])
+  teacherId   String           @db.ObjectId
+  questions   Question[] // Questions included in the test
+  students    TestAssignment[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  Grade       Grade[]
+}
+
+model Question {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  text          String // Text of the question
+  options       String[] // Answer options, if it's a multiple-choice question
+  correctAnswer String[] // Correct answer for the question
+  test          Test     @relation(fields: [testId], references: [id])
+  testId        String   @db.ObjectId
+  answers       Answer[] // Students' answers to this question
+}
+
+model Answer {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  content    String // Student's answer
+  student    User     @relation(fields: [studentId], references: [id])
+  studentId  String   @db.ObjectId
+  question   Question @relation(fields: [questionId], references: [id])
+  questionId String   @db.ObjectId
+}
+
+model TestAssignment {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  test      Test    @relation(fields: [testId], references: [id])
+  testId    String  @db.ObjectId
+  student   User    @relation(fields: [studentId], references: [id])
+  studentId String  @db.ObjectId
+  grade     Grade?  @relation(fields: [gradeId], references: [id])
+  gradeId   String? @db.ObjectId
+}
+
+model Grade {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  value          Int
+  student        User             @relation("StudentGrades", fields: [studentId], references: [id])
+  studentId      String           @db.ObjectId
+  test           Test             @relation(fields: [testId], references: [id])
+  testId         String           @db.ObjectId
+  TestAssignment TestAssignment[]
+}
