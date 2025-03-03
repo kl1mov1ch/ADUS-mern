@@ -2,12 +2,12 @@ import { Card, CardBody, Tab, Tabs } from "@nextui-org/react"
 import { useState } from "react"
 import { Login } from "../../features/user/login"
 // import { Register } from "../../features/user/register"
-import { useAuthGuard } from "../../hooks/useAuthGuard"
+import { useRestoreAuthentication } from "../../hooks/useAuthGuard"
 
 export const Auth = () => {
     const [selected, setSelected] = useState("login")
 
-    useAuthGuard()
+    useRestoreAuthentication();
 
     return (
         <div className="flex items-center justify-center h-screen">

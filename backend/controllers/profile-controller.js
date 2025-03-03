@@ -10,7 +10,6 @@ const ProfileController = {
                 where: { id: userId },
             });
 
-            // Проверка, существует ли пользователь
             if (!user) {
                 return res.status(404).json({ message: "Пользователь не найден." });
             }
@@ -22,34 +21,32 @@ const ProfileController = {
         }
     },
 
-    // Обновление данных пользователя
-    updateUser: async (req, res) => {
-        console.log("req.body:", req.body);
+    updateUserAvatar: async (req, res) => {
+        console.log("req.file:", req.file);
         const { userId } = req.params;
-        const { name, email } = req.body;
 
-        // Проверка, что переданы необходимые данные
-        if (!name && !email) {
-            return res.status(400).json({ message: "Необходимы данные для обновления." });
+        // Проверка, что файл был передан
+        if (!req.file) {
+            return res.status(400).json({ message: "Необходимо предоставить изображение для обновления." });
         }
 
         try {
-            // Обновление данных пользователя
+            // Предполагается, что middleware для обработки загрузки файла уже настроено
+            const avatarUrl = `${avatarUrlHost}/uploads/${req.file.filename}`; // Путь к сохраненному файлу
+
             const updatedUser = await prisma.user.update({
                 where: { id: userId },
                 data: {
-                    name, // Обновление имени
-                    email, // Обновление электронной почты
+                    avatarUrl,
                 },
             });
 
             return res.status(200).json(updatedUser);
         } catch (error) {
-            console.error("Ошибка при обновлении пользователя:", error.message);
-            return res.status(500).json({ message: "Ошибка при обновлении пользователя", error: error.message });
+            console.error("Ошибка при обновлении аватара:", error.message);
+            return res.status(500).json({ message: "Ошибка при обновлении аватара", error: error.message });
         }
     }
-
 };
 
 module.exports = ProfileController;

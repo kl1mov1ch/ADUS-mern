@@ -5,11 +5,12 @@ const logger = require('morgan');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { PrismaClient } = require('@prisma/client'); // Импортируем PrismaClient
+const { PrismaClient } = require('@prisma/client');
+const GeneralController = require("./controllers/general-controller");
 require('dotenv').config();
 
 const app = express();
-const prisma = new PrismaClient(); // Создаем экземпляр PrismaClient
+const prisma = new PrismaClient();
 
 app.use(cors());
 app.use(logger('dev'));
@@ -20,11 +21,15 @@ app.set('view engine', 'pug');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api', require('./routes'));
 
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
+function createUploadsDirIfNotExists() {
+  const dir = path.join(__dirname, 'uploads');
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir);
+    console.log('Директория uploads была создана.');
+  }
 }
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+createUploadsDirIfNotExists();
 
 // Функция для очистки базы данных
 async function clearDatabase() {
@@ -46,8 +51,22 @@ app.delete('/api/clear-database', async (req, res) => {
   res.status(200).send('База данных очищена!');
 });
 
+// Обработка ошибок
+app.use((err, req, res, next) => {
+  res.status(err.status || 500);
+  res.json({ error: err.message });
+});
+
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use((req, res, next) => {
   next(createError(404));
 });
+
+// Закрытие соединения с базой данных
+process.on('SIGINT', async () => {
+  await prisma.$disconnect();
+  console.log('Соединение с базой данных закрыто.');
+  process.exit(0);
+});
+
 module.exports = app;

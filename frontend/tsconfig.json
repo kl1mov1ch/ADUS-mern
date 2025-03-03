@@ -1,20 +1,38 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "useDefineForClassFields": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "allowJs": false,
-    "skipLibCheck": true,
-    "esModuleInterop": false,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "types": ["vitest/globals"]
+    "baseUrl": ".", // Базовый путь для разрешения модулей
+    "paths": {
+      "@/*": ["./src/*"], // Алиасы для путей (например, @/components)
+      "services/*": ["./src/app/services/*"] // Алиас для сервисов
+    },
+    "target": "ESNext", // Целевая версия ECMAScript
+    "useDefineForClassFields": true, // Использование define для полей класса
+    "lib": ["DOM", "DOM.Iterable", "ESNext"], // Используемые библиотеки
+    "allowJs": true, // Разрешить использование JavaScript файлов
+    "skipLibCheck": true, // Пропускать проверку типов в библиотеках
+    "esModuleInterop": true, // Включить совместимость модулей ES
+    "allowSyntheticDefaultImports": true, // Разрешить синтетические импорты по умолчанию
+    "strict": false, // Отключить строгий режим (можно включить, если нужно)
+    "module": "ESNext", // Использовать модули ESNext
+    "moduleResolution": "bundler", // Стратегия разрешения модулей
+    "resolveJsonModule": true, // Разрешить импорт JSON-файлов
+    "isolatedModules": true, // Изолированные модули (для транспиляции)
+    "noEmit": true, // Не генерировать файлы (только проверка типов)
+    "jsx": "react-jsx", // Использовать React JSX
+    "types": ["vitest/globals"], // Глобальные типы для Vitest
+    "allowImportingTsExtensions": true // Разрешить импорт с расширением .ts/.tsx
   },
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "exclude": [
+    "vite.config.ts", // Исключить конфигурацию Vite
+    "node_modules" // Исключить папку node_modules
+  ],
+  "include": [
+    "src/**/*.ts", // Включаем все TS-файлы в папке src
+    "src/**/*.tsx", // Включаем все TSX-файлы в папке src
+    "src/**/*.js", // Включаем все JS-файлы в папке src (если нужно)
+    "src/**/*.jsx" // Включаем все JSX-файлы в папке src (если нужно)
+  ],
+  "references": [
+    { "path": "./tsconfig.node.json" } // Ссылка на другой конфигурационный файл
+  ]
 }

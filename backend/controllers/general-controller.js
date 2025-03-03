@@ -25,7 +25,6 @@ const GeneralController = {
                 return res.status(400).json({ error: "Неверный логин или пароль" });
             }
 
-            // Генерируем JWT с добавлением роли
             const token = jwt.sign({ userId: user.id, role: user.role }, process.env.SECRET_KEY);
 
             res.json({ token });

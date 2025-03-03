@@ -4,8 +4,8 @@ export type User = {
     password: string;
     name?: string;
     avatarUrl?: string;
-    dateOfBirth?: string; // ISO string
-    role: Role;
+    dateOfBirth?: string;
+    role?: Role;
     createdAt: string;
     updatedAt: string;
     bio?: string;
@@ -30,11 +30,13 @@ export type Test = {
     teacher: User; // Teacher who created the test
     teacherId: string;
     questions: Question[]; // List of questions
-    students?: TestAssignment[]; // List of students assigned to the test
     createdAt: string; // Date in ISO format
     updatedAt: string; // Date in ISO format
     grades?: Grade[]; // List of grades for the test
-}
+    testAssignments?: TestAssignment[]; // Добавляем это свойство, если оно нужно
+    categoryId: string;
+};
+
 
 export type Question = {
     id: string;
@@ -43,7 +45,8 @@ export type Question = {
     correctAnswer: string[]; // The correct answer(s) to the question
     test: Test;
     testId: string;
-    answers?: Answer[]; // Answers provided by students
+    answers?: Answer[];
+    imageUrl?: string;
 };
 
 
@@ -64,7 +67,11 @@ export type TestAssignment = {
     student: User;
     studentId: string;
     grade?: Grade;
+    percentage?: number; // Добавьте этот параметр, если хотите использовать процент
+    mark?: number; // Добавьте этот параметр, если хотите использовать оценку
+    completedAt?: string; // Добавьте этот параметр, если хотите использовать время завершения
 };
+
 
 export type Grade = {
     id: string;
@@ -75,12 +82,15 @@ export type Grade = {
     testId: string;
 };
 
-export type SubmitTestResponse = {
-    correctAnswersCount: number; // Количество правильных ответов
-    percentage: number; // Процент правильных ответов
-    mark: number; // Оценка
-    score: number; // Набранный балл
-    totalQuestions: number; // Общее количество вопросов
+
+export type TestForm = {
+    title: string;
+    description: string;
+    teacherId: string;
+    questions: {
+        text: string;
+        options: string[];
+        correctAnswer: string[];
+        imageUrl?: string;
+    }[];
 };
-
-

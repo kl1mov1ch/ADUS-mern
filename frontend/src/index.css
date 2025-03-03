@@ -15,9 +15,9 @@ body {
 .teacher-button {
   width: 50%;
   margin-bottom: 8px;
-  white-space: nowrap; /* Запретить перенос текста */
-  overflow: hidden; /* Скрыть переполнение */
-  text-overflow: ellipsis; /* Добавить три точки */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 

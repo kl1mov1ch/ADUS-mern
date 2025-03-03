@@ -8,21 +8,22 @@ datasource db {
 }
 
 model User {
-  id             String           @id @default(auto()) @map("_id") @db.ObjectId
-  email          String           @unique
-  password       String
-  name           String?
-  avatarUrl      String?
-  dateOfBirth    DateTime?
-  role           Role             @default(STUDENT)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  bio            String?
-  location       String?
-  tests          Test[]           @relation("TestTeacher")
-  grades         Grade[]          @relation("StudentGrades")
-  Answer         Answer[]
-  TestAssignment TestAssignment[]
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  email           String           @unique
+  password        String
+  name            String?
+  avatarUrl       String?
+  dateOfBirth     DateTime?
+  role            Role             @default(STUDENT)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  bio             String?
+  location        String?
+  tests           Test[]           @relation("TestTeacher")
+  grades          Grade[]          @relation("StudentGrades")
+  answers         Answer[]
+  testAssignments TestAssignment[]
+  userClasses     UserClass[] // Связь с промежуточной моделью
 }
 
 enum Role {
@@ -31,46 +32,109 @@ enum Role {
   STUDENT
 }
 
+model Class {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  userClasses    UserClass[] // Связь с промежуточной моделью
+  TestAssignment TestAssignment[]
+}
+
+model UserClass {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  user    User   @relation(fields: [userId], references: [id])
+  userId  String @db.ObjectId
+  class   Class  @relation(fields: [classId], references: [id])
+  classId String @db.ObjectId
+}
+
 model Test {
-  id          String           @id @default(auto()) @map("_id") @db.ObjectId
-  title       String
-  description String
-  teacher     User             @relation("TestTeacher", fields: [teacherId], references: [id])
-  teacherId   String           @db.ObjectId
-  questions   Question[] // Questions included in the test
-  students    TestAssignment[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  Grade       Grade[]
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  title           String
+  description     String
+  imageUrl        String?
+  teacher         User              @relation("TestTeacher", fields: [teacherId], references: [id])
+  teacherId       String            @db.ObjectId
+  questions       Question[]
+  testAssignments TestAssignment[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  grades          Grade[]
+  categories      TestCategory[]
+  subcategories   TestSubcategory[]
+  isHidden        Boolean           @default(false)
+}
+
+model TestCategory {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  testId     String   @db.ObjectId
+  categoryId String   @db.ObjectId
+  test       Test     @relation(fields: [testId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+}
+
+model Category {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  subcategories Subcategory[]
+  tests         TestCategory[] // Теперь связь через промежуточную модель
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model TestSubcategory {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  testId        String      @db.ObjectId
+  subcategoryId String      @db.ObjectId
+  test          Test        @relation(fields: [testId], references: [id])
+  subcategory   Subcategory @relation(fields: [subcategoryId], references: [id])
+}
+
+model Subcategory {
+  id         String            @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  category   Category          @relation(fields: [categoryId], references: [id])
+  categoryId String            @db.ObjectId
+  tests      TestSubcategory[] // Теперь связь через промежуточную модель
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 }
 
 model Question {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  text          String // Text of the question
-  options       String[] // Answer options, if it's a multiple-choice question
-  correctAnswer String[] // Correct answer for the question
+  text          String
+  options       String[]
+  correctAnswer String[]
   test          Test     @relation(fields: [testId], references: [id])
   testId        String   @db.ObjectId
-  answers       Answer[] // Students' answers to this question
+  answers       Answer[]
+  imageUrl      String?
+  videoUrl      String?
 }
 
 model Answer {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  content    String // Student's answer
+  content    String
   student    User     @relation(fields: [studentId], references: [id])
   studentId  String   @db.ObjectId
   question   Question @relation(fields: [questionId], references: [id])
   questionId String   @db.ObjectId
+  isCorrect  Boolean?
 }
 
 model TestAssignment {
-  id        String  @id @default(auto()) @map("_id") @db.ObjectId
-  test      Test    @relation(fields: [testId], references: [id])
-  testId    String  @db.ObjectId
-  student   User    @relation(fields: [studentId], references: [id])
-  studentId String  @db.ObjectId
-  grade     Grade?  @relation(fields: [gradeId], references: [id])
-  gradeId   String? @db.ObjectId
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  test        Test      @relation(fields: [testId], references: [id])
+  testId      String    @db.ObjectId
+  student     User?     @relation(fields: [studentId], references: [id])
+  studentId   String?   @db.ObjectId
+  class       Class?    @relation(fields: [classId], references: [id])
+  classId     String?   @db.ObjectId
+  grade       Grade?    @relation(fields: [gradeId], references: [id])
+  gradeId     String?   @db.ObjectId
+  percentage  Float?
+  completedAt DateTime?
 }
 
 model Grade {
@@ -80,5 +144,5 @@ model Grade {
   studentId      String           @db.ObjectId
   test           Test             @relation(fields: [testId], references: [id])
   testId         String           @db.ObjectId
-  TestAssignment TestAssignment[]
+  testAssignment TestAssignment[]
 }

@@ -1,15 +1,16 @@
-import { useSelector } from "react-redux";
-import { selectIsAuthenticated } from "../features/user/userSlice"; // Ensure the import is correct
-import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect } from 'react';
+import { useDispatch } from "react-redux";
+import { setAuthentication } from '../features/user/userSlice';
 
-export const useAuthGuard = () => {
-    const isAuthenticated = useSelector(selectIsAuthenticated);
-    const navigate = useNavigate();
+export const useRestoreAuthentication = () => {
+    const dispatch = useDispatch();
 
     useEffect(() => {
-        if (isAuthenticated) {
-            navigate("/");
+        const token = localStorage.getItem('token');
+        if (token) {
+            dispatch(setAuthentication(true)); // Восстанавливаем состояние аутентификации
+        } else {
+            dispatch(setAuthentication(false)); // Если нет токена, то аутентификация ложная
         }
-    }, [isAuthenticated, navigate]);
+    }, [dispatch]);
 };

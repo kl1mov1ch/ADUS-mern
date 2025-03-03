@@ -9,7 +9,7 @@ import { ThemeProvider } from "./components/theme-provider";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Auth } from "./pages/auth";
 import { Layout } from "./components/layout";
-import { Marks } from "./pages/marks";
+import TeacherMarksPage from "./pages/markTeacher";
 import { Register } from "./features/user/register";
 import { CreateTest } from "./pages/createTest";
 import { TestList } from "./pages/tests";
@@ -17,7 +17,13 @@ import { TestPage } from "./pages/testsAnswers";
 import { TeacherListPage } from "./pages/teacherList";
 import { TeacherTestsPage } from "./pages/teacherTestsPage";
 import RequireAuth from "../src/app/privateRoutes";
-import {ProfilePage} from "./pages/prifile"; // Импортируем RequireAuth
+import {ProfilePage} from "./pages/prifile";
+import {UsersPage} from "./pages/usersTable";
+import StudentMarksPage from "./pages/markStudent";
+import {ChatPage} from "./pages/chatGPT";
+import {EditTestPage} from "./pages/editTestPage";
+import { CategorySubcategoryPage } from "./pages/Category"
+import { ClassesPage } from "./pages/ClassPage"
 
 const container = document.getElementById("root");
 const router = createBrowserRouter([
@@ -32,8 +38,8 @@ const router = createBrowserRouter([
         element: <Layout />,
         children: [
                     {
-                        path: "/marks/:id",
-                        element: <Marks />,
+                        path: "/test-results/:userId",
+                        element: <TeacherMarksPage />,
                     },
                     {
                         path: "/tests",
@@ -58,6 +64,30 @@ const router = createBrowserRouter([
                     {
                         path: "/profile/:userId",
                         element: <ProfilePage />,
+                    },
+                    {
+                        path: "/users",
+                        element: <UsersPage />,
+                    },
+                    {
+                        path: "/chat",
+                        element: <ChatPage />,
+                    },
+                    {
+                        path: "/student-mark/:userId",
+                        element: <StudentMarksPage />,
+                    },
+                    {
+                        path: "/edit-test/:testId",
+                        element: <EditTestPage />,
+                    },
+                    {
+                        path: "/categories",
+                        element: <CategorySubcategoryPage />,
+                    },
+                    {
+                        path: "/classes",
+                        element: <ClassesPage />,
                     },
                 ],
             },

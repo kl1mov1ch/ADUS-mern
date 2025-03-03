@@ -10,17 +10,15 @@ const checkRole = (requiredRoles) => {
         }
 
         try {
-            // Проверка токена и декодирование информации о пользователе
             const decoded = jwt.verify(token, process.env.SECRET_KEY);
             const userRole = decoded.role;
 
-            // Проверка, что роль пользователя включена в необходимые роли
             if (!requiredRoles.includes(userRole)) {
                 return res.status(403).json({ error: "Доступ запрещен: недостаточно прав" });
             }
 
-            req.user = decoded; // Прикрепление декодированных данных пользователя к объекту запроса
-            next(); // Продолжение к следующему middleware или обработчику маршрута
+            req.user = decoded;
+            next();
         } catch (err) {
             return res.status(403).json({ error: "Недействительный токен" });
         }

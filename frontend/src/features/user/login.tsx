@@ -1,10 +1,11 @@
-import { Input } from "../../components/input";
+// components/Login.tsx
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@nextui-org/react";
-import { useLazyCurrentQuery, useLoginMutation } from "../../app/services/userApi";
-import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { Input } from "../../components/input";
 import { ErrorMessage } from "../../components/error-message";
+import { useLazyCurrentQuery, useLoginMutation } from "../../app/services/userApi";
 import { hasErrorField } from "../../utils/has-error-field";
 
 type Login = {
@@ -12,11 +13,12 @@ type Login = {
   password: string;
 };
 
+// Определяем тип для пропсов
 type Props = {
   setSelected: (value: string) => void;
 };
 
-export const Login = ({ setSelected }: Props) => {
+export const Login: React.FC<Props> = ({ setSelected }) => {
   const {
     handleSubmit,
     control,
@@ -32,17 +34,18 @@ export const Login = ({ setSelected }: Props) => {
 
   const [login, { isLoading }] = useLoginMutation();
   const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState("");
   const [triggerCurrentQuery] = useLazyCurrentQuery();
 
-  // Восстановление состояния пользователя при загрузке приложения
+  const from = location.state?.from?.pathname || "/tests";
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      // Если токен существует, запрашиваем информацию о текущем пользователе
       const fetchCurrentUser = async () => {
         try {
-          await triggerCurrentQuery(); // Вызываем запрос для получения текущего пользователя
+          await triggerCurrentQuery();
         } catch (err) {
           console.error("Ошибка при загрузке текущего пользователя", err);
         }
@@ -54,26 +57,15 @@ export const Login = ({ setSelected }: Props) => {
   const onSubmit = async (data: Login) => {
     try {
       const result = await login(data).unwrap();
-
-      // Сохраняем токен в localStorage
-      localStorage.setItem("token", result.token);
-
-      // Запрашиваем текущего пользователя
+      localStorage.setItem("token", result.token);  // Сохраняем токен в localStorage
       await triggerCurrentQuery();
-
-      // Навигация после успешного логина
-      navigate("/");
-
-      // Очищаем ошибки
+      navigate("/tests", { replace: true });
       setError("");
     } catch (err) {
-      if (hasErrorField(err)) {
-        setError(err.data.error || "Ошибка при логине");
-      } else {
-        setError("Ошибка при логине");
-      }
+      setError("Ошибка при логине");
     }
   };
+
 
   return (
       <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>

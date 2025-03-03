@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-type Theme = "dark" | "light" | "gray";
+type Theme = "dark" | "light" | "gray"; // Добавляем серую тему
 
 type ThemeContextType = {
     theme: Theme;
@@ -14,13 +14,13 @@ export const ThemeContext = React.createContext<ThemeContextType>({
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const storedTheme = localStorage.getItem("theme") as Theme | null;
-    const defaultTheme: Theme = storedTheme || "dark";
+    const defaultTheme: Theme = storedTheme || "gray";
 
     const [theme, setTheme] = useState<Theme>(defaultTheme);
 
     useEffect(() => {
-        document.documentElement.className = theme;
-        localStorage.setItem("theme", theme);
+        document.documentElement.className = theme; // Применяем класс темы к HTML элементу
+        localStorage.setItem("theme", theme); // Сохраняем тему в localStorage
     }, [theme]);
 
     const toggleTheme = () => {

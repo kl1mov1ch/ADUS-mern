@@ -93,13 +93,13 @@ export const Register = () => {
                     </SelectItem>
                 ))}
             </Select>
-            {errors.role && <span className="text-red-500">{errors.role.message}</span>} {/* Error for role */}
+            {errors.role && <span className="text-red-500">{errors.role.message}</span>}
 
             <ErrorMessage error={error} />
-            {successMessage && <div className="text-green-500">{successMessage}</div>} {/* Display success message */}
+            {successMessage && <div className="text-green-500">{successMessage}</div>}
 
-            <div className="flex gap-2 justify-end">
-                <Button fullWidth color="primary" type="submit">
+            <div className="flex gap-2 justify-start">
+                <Button fullWidth color="primary" type="submit" className="w-1/10">
                     Зарегистрировать пользователя
                 </Button>
             </div>

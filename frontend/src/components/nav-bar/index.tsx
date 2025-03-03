@@ -2,13 +2,13 @@ import React from "react";
 import { GiNotebook } from "react-icons/gi";
 import { FaBook } from "react-icons/fa6";
 import { NavButton } from "../nav-button";
-import { useSelector } from "react-redux"; // Импортируем useSelector для доступа к состоянию
-import { RootState } from "../../app/store"; // Путь к RootState
-import { FaUserPlus } from "react-icons/fa"; // Иконка для регистрации пользователей
+import { useSelector } from "react-redux";
+import { RootState } from "../../app/store";
+import { FaUserPlus } from "react-icons/fa";
 import { IoMdCreate } from "react-icons/io";
 
 export const NavBar: React.FC = () => {
-    const user = useSelector((state: RootState) => state.auth.user); // Получаем информацию о пользователе из Redux
+    const user = useSelector((state: RootState) => state.auth.user);
 
     return (
         <nav>
@@ -16,33 +16,29 @@ export const NavBar: React.FC = () => {
                 {/* Кнопка для всех пользователей */}
                 <li>
                     <NavButton href="/tests" icon={<GiNotebook />} >
-                        Тесты
+                        <span className="text-sm sm:text-base md:text-lg lg:text-xl">Тесты</span>
                     </NavButton>
                 </li>
 
-                {/* Кнопка для отметок только для учителей */}
-                {user?.role === "TEACHER" || user?.role === "STUDENT" && (
+                {/* Кнопка для отметок только для учителей и студентов */}
+                {(user?.role === "TEACHER" || user?.role === "STUDENT") && (
                     <li>
                         <NavButton href="/marks/:id" icon={<FaBook />}>
-                            Отметки
+                            <span className="text-sm sm:text-base md:text-lg lg:text-xl">Отметки</span>
                         </NavButton>
                     </li>
                 )}
-
-                {/* Кнопка регистрации доступна для всех */}
                 {user?.role === "ADMIN" && (
                     <li>
                         <NavButton href="/register" icon={<FaUserPlus />}>
-                            Зарегистрировать
+                            <span className="text-sm sm:text-base md:text-lg lg:text-xl">Зарегистрировать</span>
                         </NavButton>
                     </li>
                 )}
-
-                {/* Кнопка создания теста только для учителей */}
                 {user?.role === "TEACHER" && (
                     <li>
                         <NavButton href="/test" icon={<IoMdCreate />}>
-                            Создать тест
+                            <span className="text-sm sm:text-base md:text-lg lg:text-xl">Создать тест</span>
                         </NavButton>
                     </li>
                 )}

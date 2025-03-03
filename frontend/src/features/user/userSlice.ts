@@ -15,7 +15,7 @@ interface InitialState {
 
 const initialState: InitialState = {
     user: null,
-    isAuthenticated: false,
+    isAuthenticated: localStorage.getItem("token") ? true : false, // Проверка на наличие токена в localStorage
     users: null,
     current: null,
     error: null,
@@ -36,6 +36,9 @@ const slice = createSlice({
         },
         clearError: (state) => {
             state.error = null; // Сброс ошибки
+        },
+        setAuthentication: (state, action) => {
+            state.isAuthenticated = action.payload; // Устанавливаем isAuthenticated
         },
     },
     extraReducers: (builder) => {
@@ -86,7 +89,7 @@ const slice = createSlice({
     },
 });
 
-export const { logout, resetUser, setError, clearError } = slice.actions;
+export const { setAuthentication, logout, resetUser, setError, clearError } = slice.actions;
 export default slice.reducer;
 
 // Селекторы для получения данных из состояния

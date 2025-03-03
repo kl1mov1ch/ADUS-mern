@@ -4,6 +4,10 @@ const AdminController = require('./admin-controller');
 const GeneralController = require('./general-controller');
 const TestController = require('./test-controller');
 const ProfileController = require('./profile-controller');
+const MarkController = require('./mark-controller');
+const ChatController = require('./chat-controller');
+const CategoryController = require('./category-controller');
+const ClassController = require('./class-controller');
 
 module.exports = {
     UserController,
@@ -11,5 +15,10 @@ module.exports = {
     AdminController,
     GeneralController,
     TestController,
-    ProfileController
+    ProfileController,
+    MarkController,
+    ChatController,
+    CategoryController,
+    ClassController
+
 }
