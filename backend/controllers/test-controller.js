@@ -1,5 +1,9 @@
 const { prisma } = require("../prisma/prisma-client");
 const { OpenAI } = require("openai");
+const mammoth = require('mammoth');
+const pdf = require('pdf-parse');
+const fs = require("fs")
+const path = require("path")
 
 const openai = new OpenAI({
     apiKey: process.env.CHAT_SECRET_KEY,
@@ -429,12 +433,98 @@ const TestsController = {
         }
     },
 
+    generateTestFromFile: async (req, res) => {
+        if (!req.file) {
+            return res.status(400).json({ error: "File was not uploaded." });
+        }
+
+        const { difficulty, numberOfQuestions, language, correctAnswersCount, optionsCount } = req.body;
+        const file = req.file;
+
+        try {
+            // Проверяем расширение файла
+            const fileExt = path.extname(file.originalname).toLowerCase();
+            if (!['.pdf', '.docx'].includes(fileExt)) {
+                fs.unlinkSync(file.path); // Удаляем временный файл
+                return res.status(400).json({ error: "Only PDF and DOCX files are allowed." });
+            }
+
+            let fileContent;
+
+            if (fileExt === '.pdf') {
+                const pdf = require('pdf-parse');
+                const dataBuffer = fs.readFileSync(file.path);
+                const data = await pdf(dataBuffer);
+                fileContent = data.text;
+            }
+            else if (fileExt === '.docx') {
+                const mammoth = require('mammoth');
+                const result = await mammoth.extractRawText({ path: file.path });
+                fileContent = result.value;
+            }
+
+            // Проверяем, что содержимое было извлечено
+            if (!fileContent || fileContent.trim().length === 0) {
+                fs.unlinkSync(file.path);
+                return res.status(400).json({ error: "Failed to extract text from the file." });
+            }
+
+            const prompt = `
+Generate a test based on the following document content:
+${fileContent.substring(0, 5000)}... [content truncated]
+
+Test parameters:
+- Number of questions: ${numberOfQuestions}
+- Difficulty: ${difficulty}
+- Language: ${language}
+- Number of answer options per question: ${optionsCount}
+- Number of correct answers per question: ${correctAnswersCount}
+
+Return the questions in JSON format:
+[
+  {
+    "text": "Question text",
+    "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+    "correctAnswer": ["Option 1"]
+  }
+]
+`;
+
+            const completion = await openai.chat.completions.create({
+                model: 'gpt-3.5-turbo',
+                messages: [
+                    { role: 'system', content: 'You are an assistant that generates educational tests from documents.' },
+                    { role: 'user', content: prompt },
+                ],
+                temperature: 0.7,
+                max_tokens: 2048,
+            });
+
+            const generatedTest = completion.choices[0].message.content;
+            const parsedTest = JSON.parse(generatedTest);
+
+            fs.unlinkSync(file.path);
+
+            res.status(200).json({ test: parsedTest });
+        } catch (error) {
+            console.error('Error generating test from file:', error);
+
+            if (file && fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+            }
+
+            res.status(500).json({
+                error: 'Error generating test from file',
+                details: error.message
+            });
+        }
+    },
+
     assignTestToClass: async (req, res) => {
         const { testId } = req.params;
         const { classIds } = req.body;
 
         try {
-            // Проверяем, существует ли тест
             const test = await prisma.test.findUnique({
                 where: { id: testId },
             });
@@ -468,7 +558,6 @@ const TestsController = {
                 });
             }
 
-            // Находим всех студентов в указанных классах
             const studentsInClasses = await prisma.userClass.findMany({
                 where: { classId: { in: classIds } },
                 include: { user: true },

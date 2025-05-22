@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-type Theme = "dark" | "light" | "gray"; // Добавляем серую тему
+type Theme = "dark" | "light" | "gray";
 
 type ThemeContextType = {
     theme: Theme;
@@ -13,8 +13,7 @@ export const ThemeContext = React.createContext<ThemeContextType>({
 });
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-    const storedTheme = localStorage.getItem("theme") as Theme | null;
-    const defaultTheme: Theme = storedTheme || "gray";
+    const defaultTheme: Theme = "light";
 
     const [theme, setTheme] = useState<Theme>(defaultTheme);
 

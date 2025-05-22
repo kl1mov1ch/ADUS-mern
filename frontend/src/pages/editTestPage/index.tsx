@@ -12,6 +12,9 @@ import {
     Spinner,
     Button,
     Card,
+    CardHeader,
+    CardBody,
+    CardFooter,
     Input,
     Textarea,
     Checkbox,
@@ -19,15 +22,29 @@ import {
     SelectItem,
     Chip,
     Image,
+    Divider,
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    Badge,
+    Accordion,
+    AccordionItem,
+    Tooltip
 } from '@nextui-org/react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { ErrorMessage } from '../../components/error-message';
 import { GoBack } from '../../components/go-back';
-import { MdDeleteForever } from 'react-icons/md';
+import { MdDeleteForever, MdAddPhotoAlternate } from 'react-icons/md';
 import { RiCloseFill } from 'react-icons/ri';
 import { CgPlayListAdd } from 'react-icons/cg';
-import { InlineMath } from 'react-katex';
-import 'katex/dist/katex.min.css';
+import { FiPlus, FiCheck } from 'react-icons/fi';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { BiCategory, BiBook } from 'react-icons/bi';
+import { MdAssignment, MdCategory } from 'react-icons/md';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -54,6 +71,7 @@ export const EditTestPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [previewImages, setPreviewImages] = useState<{ [key: number]: string }>({});
+    const [isHidden, setIsHidden] = useState(false);
 
     useEffect(() => {
         if (tests && testId) {
@@ -61,6 +79,7 @@ export const EditTestPage = () => {
             if (test) {
                 setTitle(test.title);
                 setDescription(test.description);
+                setIsHidden(test.isHidden);
 
                 // Десериализация correctAnswer для каждого вопроса
                 const formattedQuestions = test.questions.map((question) => {
@@ -104,7 +123,11 @@ export const EditTestPage = () => {
         }
     }, [testCategories]);
 
-    if (testsLoading) return <Spinner aria-label="Загружаем тест..." />;
+    if (testsLoading) return (
+      <div className="flex justify-center items-center h-screen">
+          <Spinner size="lg" aria-label="Загружаем тест..." />
+      </div>
+    );
     if (testsError) return <ErrorMessage error="Ошибка при загрузке теста." />;
 
     const handleQuestionChange = (index: number, field: string, value: any) => {
@@ -129,11 +152,17 @@ export const EditTestPage = () => {
     const handleAddQuestion = () => {
         setQuestions((prev) => [
             ...prev,
-            { id: String(Date.now()), text: '', options: [''], correctAnswer: [], image: null },
+            { id: String(Date.now()), text: '', options: ['', ''], correctAnswer: [], image: null },
         ]);
     };
 
     const handleAddOption = (index: number) => {
+        if (questions[index].options.length >= 10) {
+            toast.warning("Максимум 10 вариантов ответа", {
+                position: "top-right",
+            });
+            return;
+        }
         setQuestions((prevQuestions) =>
           prevQuestions.map((q, i) =>
             i === index ? { ...q, options: [...q.options, ''] } : q
@@ -144,12 +173,23 @@ export const EditTestPage = () => {
     const handleImageChange = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) {
-            console.error("Файл не выбран.");
+            toast.error("Файл не выбран", {
+                position: "top-right",
+            });
             return;
         }
 
         if (!file.type.startsWith('image/')) {
-            console.error("Загруженный файл не является изображением.");
+            toast.error("Загружайте только изображения", {
+                position: "top-right",
+            });
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Размер изображения не должен превышать 5MB", {
+                position: "top-right",
+            });
             return;
         }
 
@@ -173,12 +213,42 @@ export const EditTestPage = () => {
                 throw new Error('Не удалось получить идентификатор учителя.');
             }
 
+            // Валидация перед сохранением
+            if (!title.trim()) {
+                throw new Error('Название теста обязательно');
+            }
+
+            if (questions.length === 0) {
+                throw new Error('Добавьте хотя бы один вопрос');
+            }
+
+            for (const question of questions) {
+                if (!question.text.trim()) {
+                    throw new Error(`Вопрос ${questions.indexOf(question) + 1}: текст вопроса обязателен`);
+                }
+
+                if (question.options.length < 2) {
+                    throw new Error(`Вопрос ${questions.indexOf(question) + 1}: должно быть минимум 2 варианта ответа`);
+                }
+
+                for (const option of question.options) {
+                    if (!option.trim()) {
+                        throw new Error(`Вопрос ${questions.indexOf(question) + 1}: вариант ответа не может быть пустым`);
+                    }
+                }
+
+                if (question.correctAnswer.length === 0) {
+                    throw new Error(`Вопрос ${questions.indexOf(question) + 1}: выберите хотя бы один правильный ответ`);
+                }
+            }
+
             const formData = new FormData();
             formData.append('title', title);
             formData.append('description', description);
             formData.append('teacherId', teacherId);
             formData.append('categoryIds', JSON.stringify(selectedCategories));
             formData.append('subcategoryIds', JSON.stringify(selectedSubcategories));
+            formData.append('isHidden', isHidden.toString());
 
             questions.forEach((question, index) => {
                 formData.append(`questions[${index}][text]`, question.text);
@@ -203,15 +273,30 @@ export const EditTestPage = () => {
                 testData: formData,
             }).unwrap();
 
+            toast.success("Тест успешно обновлен!", {
+                position: "top-center",
+                autoClose: 3000,
+            });
             navigate(`/tests`);
         } catch (err) {
-            setError('Не удалось сохранить изменения. Пожалуйста, попробуйте снова.');
+            const errorMessage = err.message || 'Не удалось сохранить изменения. Пожалуйста, попробуйте снова.';
+            setError(errorMessage);
+            toast.error(errorMessage, {
+                position: "top-center",
+                autoClose: 5000,
+            });
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleDeleteQuestion = (index: number) => {
+        if (questions.length <= 1) {
+            toast.warning("Должен остаться хотя бы один вопрос", {
+                position: "top-right",
+            });
+            return;
+        }
         setQuestions((prevQuestions) => prevQuestions.filter((_, i) => i !== index));
         setPreviewImages((prev) => {
             const newPreviews = { ...prev };
@@ -221,6 +306,12 @@ export const EditTestPage = () => {
     };
 
     const handleDeleteOption = (qIndex: number, oIndex: number) => {
+        if (questions[qIndex].options.length <= 2) {
+            toast.warning("Должно быть минимум 2 варианта ответа", {
+                position: "top-right",
+            });
+            return;
+        }
         setQuestions((prevQuestions) =>
           prevQuestions.map((q, i) =>
             i === qIndex
@@ -244,182 +335,296 @@ export const EditTestPage = () => {
         );
     };
 
+    const handleToggleVisibility = async () => {
+        try {
+            setIsHidden(!isHidden);
+            toast.success(`Тест теперь ${!isHidden ? "скрыт" : "виден"}`, {
+                position: "top-right",
+                autoClose: 3000,
+            });
+        } catch (error) {
+            console.error("Ошибка при изменении видимости теста:", error);
+            toast.error("Ошибка при изменении видимости теста", {
+                position: "top-right",
+                autoClose: 3000,
+            });
+        }
+    };
+
     const selectedCategoryData = allCategories?.filter((cat) => selectedCategories.includes(cat.id));
 
     return (
-      <div className="flex flex-col gap-6 p-4">
-          <GoBack />
-          <h1 className="text-xl font-bold mb-4">Редактирование теста</h1>
-          {error && <ErrorMessage error={error} />}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+          <ToastContainer
+            position="top-center"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="colored"
+          />
 
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={cardVariants}
-          >
-              <Input
-                label="Название теста"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="mb-6"
-              />
-              <Textarea
-                label="Описание теста"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="mb-6"
-              />
+          <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-4">
+                  <GoBack />
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      Редактирование теста
+                  </h1>
+              </div>
+              <div className="flex gap-3">
+                  <Button
+                    color="warning"
+                    variant="flat"
+                    onClick={handleToggleVisibility}
+                    startContent={isHidden ? <FaEye /> : <FaEyeSlash />}
+                  >
+                      {isHidden ? "Показать" : "Скрыть"}
+                  </Button>
+                  <Button
+                    color="primary"
+                    onClick={handleSave}
+                    isLoading={isSaving}
+                    endContent={<FiCheck />}
+                  >
+                      {isSaving ? "Сохранение..." : "Сохранить"}
+                  </Button>
+              </div>
+          </div>
 
-              {/* Выбор категорий */}
-              <Select
-                label="Выберите категории"
-                selectionMode="multiple"
-                selectedKeys={selectedCategories}
-                onSelectionChange={handleCategoryChange}
-                className="mb-4"
-              >
-                  {allCategories?.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                    </SelectItem>
-                  ))}
-              </Select>
+          {error && (
+            <div className="mb-6">
+                <ErrorMessage error={error} />
+            </div>
+          )}
 
-              {/* Выбор подкатегорий */}
-              {selectedCategoryData && selectedCategoryData.length > 0 && (
-                <div className="mb-6">
-                    <h3 className="font-semibold mb-2">Выберите подкатегории:</h3>
-                    <div className="flex flex-wrap gap-2">
-                        {selectedCategoryData.map((category) =>
-                          category.subcategories?.map((subcategory) => (
-                            <Chip
-                              key={subcategory.id}
-                              color={selectedSubcategories.includes(subcategory.id) ? "primary" : "default"}
-                              onClick={() => handleSubcategoryChange(subcategory.id)}
-                              className="cursor-pointer"
-                            >
-                                {subcategory.name}
-                            </Chip>
-                          ))
-                        )}
-                    </div>
-                </div>
-              )}
+          <div className="space-y-8">
+              {/* Основная информация о тесте */}
+              <Card className="p-6 shadow-lg">
+                  <CardHeader className="pb-4">
+                      <h2 className="text-xl font-semibold">Основная информация</h2>
+                  </CardHeader>
+                  <Divider />
+                  <CardBody className="space-y-6 pt-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <Input
+                            label="Название теста"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            size="lg"
+                            variant="bordered"
+                            isRequired
+                          />
+                          <Textarea
+                            label="Описание теста"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            size="lg"
+                            variant="bordered"
+                            minRows={3}
+                          />
+                      </div>
 
-              {questions.map((question, qIndex) => (
-                <motion.div
-                  key={question.id}
-                  className="mb-4"
-                  variants={cardVariants}
-                >
-                    <Card className="p-4">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="font-bold">Вопрос {qIndex + 1}</span>
-                            <RiCloseFill
-                              onClick={() => handleDeleteQuestion(qIndex)}
-                              className="w-7 h-7 cursor-pointer hover:scale-110"
-                            />
-                        </div>
-                        <Input
-                          label="Текст вопроса"
-                          value={question.text}
-                          onChange={(e) =>
-                            handleQuestionChange(qIndex, 'text', e.target.value)
-                          }
-                        />
-                        {/* Отображение формулы в реальном времени */}
-                        {/*<div className="mt-2">*/}
-                        {/*    <InlineMath>{question.text}</InlineMath>*/}
-                        {/*</div>*/}
-                        <div className="mt-4">
-                            <div className="flex justify-between items-center">
-                                <span className="font-bold">Загрузка изображения:</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <Select
+                            label="Предметы"
+                            selectionMode="multiple"
+                            selectedKeys={selectedCategories}
+                            onSelectionChange={handleCategoryChange}
+                            size="lg"
+                            variant="bordered"
+                            isRequired
+                          >
+                              {allCategories?.map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                    {category.name}
+                                </SelectItem>
+                              ))}
+                          </Select>
+
+                          {selectedCategoryData && selectedCategoryData.length > 0 && (
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Темы:</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {selectedCategoryData.map((category) =>
+                                      category.subcategories?.map((subcategory) => (
+                                        <Chip
+                                          key={subcategory.id}
+                                          color={selectedSubcategories.includes(subcategory.id) ? "primary" : "default"}
+                                          onClick={() => handleSubcategoryChange(subcategory.id)}
+                                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                                        >
+                                            {subcategory.name}
+                                        </Chip>
+                                      ))
+                                    )}
+                                </div>
                             </div>
-                            <div className="flex items-center gap-4">
-                                <Button
-                                  as="label"
-                                  htmlFor={`image-upload-${qIndex}`}
-                                  color="primary"
-                                  variant="bordered"
-                                  className="cursor-pointer"
-                                >
-                                    Загрузить изображение
-                                </Button>
-                                <input
-                                  id={`image-upload-${qIndex}`}
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => handleImageChange(qIndex, e)}
-                                  className="hidden"
-                                />
-                                {previewImages[qIndex] && (
-                                  <Image
-                                    src={previewImages[qIndex]}
-                                    alt="Preview"
-                                    className='size-80 border-3'
-                                  />
-                                )}
-                            </div>
-                        </div>
-                        <div className="mt-4">
-                            {question.options.map((option, oIndex) => (
-                              <motion.div
-                                key={oIndex}
-                                className="flex items-center gap-2 mb-2"
-                                variants={cardVariants}
-                              >
-                                  <Input
-                                    value={option}
-                                    onChange={(e) =>
-                                      handleOptionChange(qIndex, oIndex, e.target.value)
-                                    }
-                                  />
-                                  <MdDeleteForever
-                                    onClick={() => handleDeleteOption(qIndex, oIndex)}
-                                    className="w-7 h-7 cursor-pointer hover:scale-110"
-                                  />
-                                  <Checkbox
-                                    isSelected={question.correctAnswer.includes(option)}
-                                    onChange={() => {
-                                        const updatedCorrectAnswers = question.correctAnswer.includes(
-                                          option
-                                        )
-                                          ? question.correctAnswer.filter((ans) => ans !== option)
-                                          : [...question.correctAnswer, option];
-                                        handleQuestionChange(qIndex, 'correctAnswer', updatedCorrectAnswers);
-                                    }}
-                                  >
-                                      Ответ
-                                  </Checkbox>
-                              </motion.div>
-                            ))}
-                            <Button
-                              onClick={() => handleAddOption(qIndex)}
-                              className="mt-2"
-                              color="primary"
+                          )}
+                      </div>
+                  </CardBody>
+              </Card>
+
+              {/* Вопросы теста */}
+              <Card className="p-6 shadow-lg">
+                  <CardHeader className="pb-4 flex justify-between items-center">
+                      <h2 className="text-xl font-semibold">Вопросы теста</h2>
+                      <Button
+                        color="primary"
+                        variant="flat"
+                        onClick={handleAddQuestion}
+                        startContent={<CgPlayListAdd />}
+                      >
+                          Добавить вопрос
+                      </Button>
+                  </CardHeader>
+                  <Divider />
+                  <CardBody className="space-y-6 pt-4">
+                      <AnimatePresence>
+                          {questions.map((question, qIndex) => (
+                            <motion.div
+                              key={question.id || qIndex}
+                              variants={cardVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit="exit"
+                              layout
                             >
-                                Добавить вариант ответа
-                            </Button>
-                        </div>
-                    </Card>
-                </motion.div>
-              ))}
-          </motion.div>
+                                <Card className="p-5 border-1 border-gray-200 dark:border-gray-700">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div className="flex items-center gap-2">
+                                            <Chip color="primary" variant="dot">
+                                                Вопрос {qIndex + 1}
+                                            </Chip>
+                                            {isHidden && (
+                                              <Badge color="warning" content="Скрыт" />
+                                            )}
+                                        </div>
+                                        <Button
+                                          isIconOnly
+                                          variant="light"
+                                          color="danger"
+                                          onClick={() => handleDeleteQuestion(qIndex)}
+                                          size="sm"
+                                        >
+                                            <RiCloseFill className="w-5 h-5" />
+                                        </Button>
+                                    </div>
 
-          <div className="flex justify-between w-full">
-              <Button
-                color="primary"
-                onClick={handleAddQuestion}
-                className="flex items-center"
-              >
-                  Новый вопрос
-                  <CgPlayListAdd className="w-5 h-5 ml-2" />
-              </Button>
+                                    <div className="space-y-4">
+                                        <Input
+                                          label="Текст вопроса"
+                                          value={question.text}
+                                          onChange={(e) =>
+                                            handleQuestionChange(qIndex, 'text', e.target.value)
+                                          }
+                                          size="lg"
+                                          variant="bordered"
+                                          isRequired
+                                        />
 
-              <Button onClick={handleSave} color="success" disabled={isSaving}>
-                  {isSaving ? 'Сохранение...' : 'Сохранить изменения'}
-              </Button>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">Изображение (не обязательно)</label>
+                                            <div className="flex items-center gap-3">
+                                                <label
+                                                  htmlFor={`image-upload-${qIndex}`}
+                                                  className="flex items-center gap-2 cursor-pointer p-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary transition-colors"
+                                                >
+                                                    <MdAddPhotoAlternate className="text-xl text-gray-500" />
+                                                    <span className="text-sm">Загрузить изображение</span>
+                                                </label>
+                                                <input
+                                                  id={`image-upload-${qIndex}`}
+                                                  type="file"
+                                                  accept="image/*"
+                                                  onChange={(e) => handleImageChange(qIndex, e)}
+                                                  className="hidden"
+                                                />
+                                                {previewImages[qIndex] && (
+                                                  <div className="relative">
+                                                      <Image
+                                                        src={previewImages[qIndex]}
+                                                        alt="Preview"
+                                                        className="w-40 h-40 object-contain rounded-md border"
+                                                      />
+                                                  </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center">
+                                                <label className="text-sm font-medium">Варианты ответов:</label>
+                                                <Tooltip content="Добавить вариант">
+                                                    <Button
+                                                      isIconOnly
+                                                      variant="light"
+                                                      color="primary"
+                                                      onClick={() => handleAddOption(qIndex)}
+                                                      size="sm"
+                                                    >
+                                                        <FiPlus />
+                                                    </Button>
+                                                </Tooltip>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {question.options.map((option, oIndex) => (
+                                                  <motion.div
+                                                    key={oIndex}
+                                                    className="flex items-center gap-3"
+                                                    variants={cardVariants}
+                                                  >
+                                                      <Input
+                                                        value={option}
+                                                        onChange={(e) =>
+                                                          handleOptionChange(qIndex, oIndex, e.target.value)
+                                                        }
+                                                        size="lg"
+                                                        variant="bordered"
+                                                        isRequired
+                                                        className="flex-1"
+                                                      />
+                                                      <Checkbox
+                                                        isSelected={question.correctAnswer.includes(option)}
+                                                        onChange={() => {
+                                                            const updatedCorrectAnswers = question.correctAnswer.includes(
+                                                              option
+                                                            )
+                                                              ? question.correctAnswer.filter((ans) => ans !== option)
+                                                              : [...question.correctAnswer, option];
+                                                            handleQuestionChange(qIndex, 'correctAnswer', updatedCorrectAnswers);
+                                                        }}
+                                                        color="success"
+                                                        size="lg"
+                                                      >
+                                                          Верный
+                                                      </Checkbox>
+                                                      <Tooltip content="Удалить вариант">
+                                                          <Button
+                                                            isIconOnly
+                                                            variant="light"
+                                                            color="danger"
+                                                            size="sm"
+                                                            onClick={() => handleDeleteOption(qIndex, oIndex)}
+                                                          >
+                                                              <MdDeleteForever className="w-5 h-5" />
+                                                          </Button>
+                                                      </Tooltip>
+                                                  </motion.div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </motion.div>
+                          ))}
+                      </AnimatePresence>
+                  </CardBody>
+              </Card>
           </div>
       </div>
     );

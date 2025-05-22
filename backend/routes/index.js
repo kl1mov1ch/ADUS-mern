@@ -26,7 +26,15 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png' || file.mimetype === "image/jpg") {
+  const allowedMimeTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/jpg',
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error('Недопустимый тип файла'), false);
@@ -46,8 +54,7 @@ router.post('/logout', GeneralController.logout);
 // UserController routes
 router.get("/tests", authToken, UserController.getTests);
 router.post("/tests/:testId", authToken, UserController.submitTest);
-
-// AdminController routes
+router.put("/update-avatar", checkRole(['ADMIN', 'TEACHER', 'STUDENT']), authToken, upload.single('avatar'), UserController.updateAvatar);// AdminController routes
 router.post("/register", authToken, checkRole(['ADMIN']), AdminController.register);
 router.post("/create-admin", AdminController.createAdmin);
 router.put("/update/:userId", checkRole(['ADMIN']), authToken, upload.single('avatar'), AdminController.updateUser);
@@ -69,10 +76,10 @@ router.post("/generate-test", authToken, checkRole(['TEACHER']), TestController.
 router.delete("/tests/:testId/remove-assignment/:classId", authToken, checkRole(["TEACHER"]), TestController.removeTestAssignment);
 router.post("/tests/:testId/assign-to-class", authToken, checkRole(['TEACHER']), TestController.assignTestToClass);
 router.put("/tests/:testId/toggle-visibility", authToken, checkRole(['TEACHER']), TestController.toggleTestVisibility);
-
+router.post('/generate-test-from-file', upload.single('file'), authToken, checkRole(["TEACHER"]), TestController.generateTestFromFile);
 //ProfileController
 router.get("/profile/:userId", authToken, ProfileController.getUser);
-router.put("/profile/:id", authToken, ProfileController.updateUserAvatar);
+router.put("/profile/:userId/avatar", authToken, ProfileController.updateUserAvatar);
 
 //MarlController
 router.get("/test-results/:teacherId",authToken,  MarkController.getTeacherMarks);

@@ -91,6 +91,34 @@ export const userApi = api.injectEndpoints({
       }),
     }),
 
+    updateAvatar: builder.mutation<User, { id: string; avatar: File }>({
+      query: ({ id, avatar }) => {
+        const formData = new FormData();
+        formData.append('avatar', avatar);
+        formData.append('userId', id);
+
+        return {
+          url: '/profile/upload-avatar',
+          method: "POST",
+          body: formData,
+        };
+      },
+    }),
+
+    updateUserAvatar: builder.mutation<User, { userId: string; avatar: File }>({
+      query: ({ userId, avatar }) => {
+        const formData = new FormData();
+        formData.append('avatar', avatar);
+        formData.append('userId', userId);
+
+        return {
+          url: `/profile/${userId}/avatar`,
+          method: "PUT",
+          body: formData,
+        };
+      },
+    }),
+
     updateUser: builder.mutation<User, { userData: { email: string; name: string; avatarUrl: string; role: string, classId: string }; id: string }>({
       query: ({ userData, id }) => ({
         url: `/update/${id}`,
@@ -118,14 +146,6 @@ export const userApi = api.injectEndpoints({
       query: (userId) => ({
         url: `/users/${userId}/classes`,
         method: "GET",
-      }),
-    }),
-
-    updateAvatar: builder.mutation<User, { userData: {avatarUrl: string;}; id: string }>({
-      query: ({ userData, id }) => ({
-        url: `/profile/${id}`,
-        method: "PUT",
-        body: userData,
       }),
     }),
 
@@ -304,6 +324,36 @@ export const userApi = api.injectEndpoints({
       }),
     }),
 
+    generateTestFromFile: builder.mutation<{ test: Question[] }, {
+      file: File;
+      topic?: string;
+      difficulty: string;
+      numberOfQuestions: number;
+      language: string;
+      correctAnswersCount: number;
+      optionsCount: number;
+    }>({
+      query: (data) => {
+        const formData = new FormData();
+        formData.append('file', data.file);
+        formData.append('difficulty', data.difficulty);
+        formData.append('numberOfQuestions', data.numberOfQuestions.toString());
+        formData.append('language', data.language);
+        formData.append('correctAnswersCount', data.correctAnswersCount.toString());
+        formData.append('optionsCount', data.optionsCount.toString());
+
+        if (data.topic) {
+          formData.append('topic', data.topic);
+        }
+
+        return {
+          url: '/generate-test-from-file',
+          method: 'POST',
+          body: formData,
+        };
+      },
+    }),
+
     // Добавление пользователя в класс
     addUserToClass: builder.mutation<void, { userId: string; classId: string }>({
       query: ({ userId, classId }) => ({
@@ -321,6 +371,8 @@ export const userApi = api.injectEndpoints({
       }),
     }),
   }),
+
+
 });
 
 export const useCurrentUser = () => {
@@ -347,12 +399,12 @@ export const {
   useGetTeachersMarksQuery,
   useChatGPTMutation,
   useUpdateAvatarMutation,
+  useUpdateUserAvatarMutation,
   useUpdateTestMutation,
   useDeleteTestMutation,
   useGetStudentMarksQuery,
   useCreateCategoryMutation,
   useGetAllCategoriesQuery,
-  useGetCategoryByIdQuery,
   useUpdateCategoryMutation,
   useDeleteCategoryMutation,
   useCreateSubcategoryMutation,
@@ -361,16 +413,16 @@ export const {
   useGetCategoriesAndSubcategoriesForTestQuery,
   useCreateClassMutation,
   useGetAllClassesQuery,
-  useGetClassByIdQuery,
   useUpdateClassMutation,
   useDeleteClassMutation,
   useAddUserToClassMutation,
   useRemoveUserFromClassMutation,
-  useGetClassesByUserIdQuery,
   useGenerateTestMutation,
   useUpdateTestVisibilityMutation,
   useAssignTestToClassMutation,
-  useRemoveTestAssignmentMutation
+  useRemoveTestAssignmentMutation,
+  useGenerateTestFromFileMutation,
+
 } = userApi;
 
 export const {

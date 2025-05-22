@@ -1,9 +1,11 @@
 const { prisma } = require("../prisma/prisma-client");
+const fs = require('fs');
+const path = require('path');
 
 const ProfileController = {
     // Получение данных о пользователе по ID
     getUser: async (req, res) => {
-        const { userId } = req.params; // Извлечение userId из параметров запроса
+        const { userId } = req.params;
 
         try {
             const user = await prisma.user.findUnique({
@@ -21,30 +23,38 @@ const ProfileController = {
         }
     },
 
+    // Обновление только аватара пользователя
     updateUserAvatar: async (req, res) => {
-        console.log("req.file:", req.file);
         const { userId } = req.params;
 
-        // Проверка, что файл был передан
         if (!req.file) {
-            return res.status(400).json({ message: "Необходимо предоставить изображение для обновления." });
+            return res.status(400).json({ message: "Файл аватара не был загружен." });
         }
 
         try {
-            // Предполагается, что middleware для обработки загрузки файла уже настроено
-            const avatarUrl = `${avatarUrlHost}/uploads/${req.file.filename}`; // Путь к сохраненному файлу
+            // Удаляем старый аватар, если он существует
+            const user = await prisma.user.findUnique({ where: { id: userId } });
+            if (user.avatarUrl) {
+                const oldAvatarPath = path.join(__dirname, '..', 'uploads', path.basename(user.avatarUrl));
+                if (fs.existsSync(oldAvatarPath)) {
+                    fs.unlinkSync(oldAvatarPath);
+                }
+            }
 
+            // Обновляем аватар в базе данных
+            const avatarUrl = `/uploads/${req.file.filename}`;
             const updatedUser = await prisma.user.update({
                 where: { id: userId },
-                data: {
-                    avatarUrl,
-                },
+                data: { avatarUrl },
             });
 
             return res.status(200).json(updatedUser);
         } catch (error) {
             console.error("Ошибка при обновлении аватара:", error.message);
-            return res.status(500).json({ message: "Ошибка при обновлении аватара", error: error.message });
+            return res.status(500).json({
+                message: "Ошибка при обновлении аватара",
+                error: error.message
+            });
         }
     }
 };

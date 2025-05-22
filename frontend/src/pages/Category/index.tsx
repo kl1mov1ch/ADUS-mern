@@ -10,12 +10,6 @@ import {
   useUpdateSubcategoryMutation,
 } from "../../app/services/userApi";
 import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
   Button,
   Spinner,
   Input,
@@ -29,13 +23,22 @@ import {
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
+  Card,
+  CardHeader,
+  CardBody,
+  Divider,
+  Pagination,
+  Chip,
+  Progress,
+  Image
 } from "@nextui-org/react";
-import { RiDeleteBinLine, RiEdit2Line, RiAddLine } from "react-icons/ri";
+import { RiDeleteBinLine, RiEdit2Line, RiAddLine, RiSearchLine } from "react-icons/ri";
 import { TbCategoryPlus } from "react-icons/tb";
 import { ErrorMessage } from "../../components/error-message";
 import { GoBack } from "../../components/go-back";
-import { motion } from 'framer-motion'; // Импортируем framer-motion
-
+import { FaCheckCircle, FaTimesCircle, FaInfoCircle } from "react-icons/fa";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export const CategorySubcategoryPage = () => {
   const { data: categories, error, isLoading, refetch } = useGetAllCategoriesQuery();
@@ -52,9 +55,14 @@ export const CategorySubcategoryPage = () => {
   const [editSubcategoryName, setEditSubcategoryName] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingSubcategoryId, setEditingSubcategoryId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 5;
 
   const { isOpen: isCategoryModalOpen, onOpen: openCategoryModal, onClose: closeCategoryModal } = useDisclosure();
   const { isOpen: isSubcategoryModalOpen, onOpen: openSubcategoryModal, onClose: closeSubcategoryModal } = useDisclosure();
+  const { isOpen: isDeleteModalOpen, onOpen: openDeleteModal, onClose: closeDeleteModal } = useDisclosure();
+  const [itemToDelete, setItemToDelete] = useState<{ type: 'category' | 'subcategory', id: string } | null>(null);
 
   useEffect(() => {
     if (editingCategoryId && categories) {
@@ -63,8 +71,18 @@ export const CategorySubcategoryPage = () => {
     }
   }, [editingCategoryId, categories]);
 
-  if (isLoading) return <Spinner aria-label="Загружаем данные..." />;
+  if (isLoading) return (
+    <div className="flex justify-center items-center h-screen">
+      <Spinner size="lg" aria-label="Загружаем данные..." />
+    </div>
+  );
+
   if (error) return <ErrorMessage error="Ошибка при загрузке данных." />;
+
+  const filteredCategories = categories?.filter(category =>
+    category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    category.subcategories.some(subcategory => subcategory.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .slice((page - 1) * rowsPerPage, page * rowsPerPage));
 
   const handleCreateCategory = async () => {
     try {
@@ -72,8 +90,14 @@ export const CategorySubcategoryPage = () => {
       setNewCategoryName("");
       closeCategoryModal();
       refetch();
+      toast.success("Предмет успешно создан!", {
+        position: "top-center",
+        autoClose: 3000,
+      });
     } catch (err) {
-      console.error("Ошибка при создании предмета:", err);
+      toast.error("Ошибка при создании предмета", {
+        position: "top-center",
+      });
     }
   };
 
@@ -84,8 +108,14 @@ export const CategorySubcategoryPage = () => {
       setEditCategoryName("");
       closeCategoryModal();
       refetch();
+      toast.success("Предмет успешно обновлен!", {
+        position: "top-center",
+        autoClose: 3000,
+      });
     } catch (err) {
-      console.error("Ошибка при обновлении категории:", err);
+      toast.error("Ошибка при обновлении предмета", {
+        position: "top-center",
+      });
     }
   };
 
@@ -93,8 +123,14 @@ export const CategorySubcategoryPage = () => {
     try {
       await deleteCategory(categoryId).unwrap();
       refetch();
+      toast.success("Предмет успешно удален!", {
+        position: "top-center",
+        autoClose: 3000,
+      });
     } catch (err) {
-      console.error("Ошибка при удалении предмета:", err);
+      toast.error("Ошибка при удалении предмета", {
+        position: "top-center",
+      });
     }
   };
 
@@ -104,8 +140,14 @@ export const CategorySubcategoryPage = () => {
       setNewSubcategoryName("");
       closeSubcategoryModal();
       refetch();
+      toast.success("Тема успешно создана!", {
+        position: "top-center",
+        autoClose: 3000,
+      });
     } catch (err) {
-      console.error("Ошибка при создании темы:", err);
+      toast.error("Ошибка при создании темы", {
+        position: "top-center",
+      });
     }
   };
 
@@ -116,8 +158,14 @@ export const CategorySubcategoryPage = () => {
       setEditSubcategoryName("");
       closeSubcategoryModal();
       refetch();
+      toast.success("Тема успешно обновлена!", {
+        position: "top-center",
+        autoClose: 3000,
+      });
     } catch (err) {
-      console.error("Ошибка при обновлении темы:", err);
+      toast.error("Ошибка при обновлении темы", {
+        position: "top-center",
+      });
     }
   };
 
@@ -125,123 +173,213 @@ export const CategorySubcategoryPage = () => {
     try {
       await deleteSubcategory(subcategoryId).unwrap();
       refetch();
+      toast.success("Тема успешно удалена!", {
+        position: "top-center",
+        autoClose: 3000,
+      });
     } catch (err) {
-      console.error("Ошибка при удалении темы:", err);
+      toast.error("Ошибка при удалении темы", {
+        position: "top-center",
+      });
+    }
+  };
+
+  const handleDeleteConfirmation = () => {
+    if (itemToDelete) {
+      if (itemToDelete.type === 'category') {
+        handleDeleteCategory(itemToDelete.id);
+      } else {
+        handleDeleteSubcategory(itemToDelete.id);
+      }
+      closeDeleteModal();
     }
   };
 
   return (
-    <div>
-      <GoBack />
-      <h1 className="text-xl font-bold mb-4">Управление предметами и темами</h1>
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <ToastContainer
+        position="top-center"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          Управление предметами и темами
+        </h1>
+      </div>
 
-      <Table aria-label="Предметы и темы">
-        <TableHeader>
-          <TableColumn>№</TableColumn>
-          <TableColumn>Предметы</TableColumn>
-          <TableColumn>Темы</TableColumn>
-        </TableHeader>
-        <TableBody>
-          {categories?.map((category, index) => (
-            <TableRow key={category.id}>
-              <TableCell>{index + 1}</TableCell>
-              <TableCell>
-                <Dropdown>
-                  <DropdownTrigger>
-                    <Button className='bg-secondary-300' auto flat>{category.name}</Button>
-                  </DropdownTrigger>
-                  <DropdownMenu>
-                    <DropdownItem
-                      key="edit-category"
-                      icon={<RiEdit2Line />}
-                      onClick={() => {
-                        setEditingCategoryId(category.id);
-                        setEditCategoryName(category.name);
-                        openCategoryModal();
-                      }}
-                    >
-                      Редактировать
-                    </DropdownItem>
-                    <DropdownItem
-                      key="delete-category"
-                      icon={<RiDeleteBinLine />}
-                      color="danger"
-                      onClick={() => handleDeleteCategory(category.id)}
-                    >
-                      Удалить
-                    </DropdownItem>
-                    <DropdownItem
-                      key="add-subcategory"
-                      icon={<RiAddLine />}
-                      onClick={() => {
-                        setEditingCategoryId(category.id);
-                        openSubcategoryModal();
-                      }}
-                    >
-                      Добавить тему
-                    </DropdownItem>
-                  </DropdownMenu>
-                </Dropdown>
-              </TableCell>
-              <TableCell>
-                <div className="subcategory-grid">
-                  {category.subcategories.map((subcategory) => (
-                    <Dropdown key={subcategory.id}>
+      <Card className="mb-8 shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500">
+          <div className="flex justify-between items-center w-full">
+            <h2 className="text-xl font-semibold text-white">Список предметов</h2>
+            <Button
+              onClick={openCategoryModal}
+              color="none"
+              variant="shadow"
+              className="text-white"
+              endContent={<TbCategoryPlus className="ml-2" />}
+            >
+              Добавить предмет
+            </Button>
+          </div>
+        </CardHeader>
+        <Divider />
+        <CardBody className="p-6">
+          <div className="mb-6">
+            <Input
+              placeholder="Поиск по предметам и темам"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              startContent={<RiSearchLine />}
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-6">
+            {filteredCategories?.map((category, index) => (
+              <Card key={category.id} className="border-2 border-gray-200 dark:border-gray-700">
+                <CardHeader className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 p-4">
+                  <div className="flex items-center gap-3">
+                    <Chip color="primary" variant="dot">
+                      {(page - 1) * rowsPerPage + index + 1}
+                    </Chip>
+                    <h3 className="text-lg font-semibold">{category.name}</h3>
+                  </div>
+                  <div className="flex gap-2">
+                    <Dropdown>
                       <DropdownTrigger>
-                        <Button className='bg-warning-300' auto flat>{subcategory.name}</Button>
+                        <Button isIconOnly size="sm" variant="flat" color="primary">
+                          <RiEdit2Line />
+                        </Button>
                       </DropdownTrigger>
                       <DropdownMenu>
                         <DropdownItem
-                          key="edit-subcategory"
-                          icon={<RiEdit2Line />}
+                          key="edit-category"
+                          startContent={<RiEdit2Line />}
                           onClick={() => {
-                            setEditingSubcategoryId(subcategory.id);
-                            setEditSubcategoryName(subcategory.name);
-                            openSubcategoryModal();
+                            setEditingCategoryId(category.id);
+                            setEditCategoryName(category.name);
+                            openCategoryModal();
                           }}
                         >
                           Редактировать
                         </DropdownItem>
                         <DropdownItem
-                          key="delete-subcategory"
-                          icon={<RiDeleteBinLine />}
+                          key="delete-category"
+                          startContent={<RiDeleteBinLine />}
                           color="danger"
-                          onClick={() => handleDeleteSubcategory(subcategory.id)}
+                          onClick={() => {
+                            setItemToDelete({ type: 'category', id: category.id });
+                            openDeleteModal();
+                          }}
                         >
                           Удалить
                         </DropdownItem>
+                        <DropdownItem
+                          key="add-subcategory"
+                          startContent={<RiAddLine />}
+                          onClick={() => {
+                            setEditingCategoryId(category.id);
+                            openSubcategoryModal();
+                          }}
+                        >
+                          Добавить тему
+                        </DropdownItem>
                       </DropdownMenu>
                     </Dropdown>
-                  ))}
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                  </div>
+                </CardHeader>
+                <CardBody className="p-4">
+                  <div className="flex flex-wrap gap-3">
+                    {category.subcategories.map((subcategory) => (
+                      <div key={subcategory.id} className="relative group">
+                        <Dropdown>
+                          <DropdownTrigger>
+                            <Chip
+                              color="secondary"
+                              variant="dot"
+                              className="cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-900/50"
+                            >
+                              {subcategory.name}
+                            </Chip>
+                          </DropdownTrigger>
+                          <DropdownMenu>
+                            <DropdownItem
+                              key="edit-subcategory"
+                              startContent={<RiEdit2Line />}
+                              onClick={() => {
+                                setEditingSubcategoryId(subcategory.id);
+                                setEditSubcategoryName(subcategory.name);
+                                openSubcategoryModal();
+                              }}
+                            >
+                              Редактировать
+                            </DropdownItem>
+                            <DropdownItem
+                              key="delete-subcategory"
+                              startContent={<RiDeleteBinLine />}
+                              color="danger"
+                              onClick={() => {
+                                setItemToDelete({ type: 'subcategory', id: subcategory.id });
+                                openDeleteModal();
+                              }}
+                            >
+                              Удалить
+                            </DropdownItem>
+                          </DropdownMenu>
+                        </Dropdown>
+                      </div>
+                    ))}
+                  </div>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
 
+          <div className="mt-6 flex justify-center">
+            <Pagination
+              total={Math.ceil((categories?.length || 0) / rowsPerPage)}
+              initialPage={1}
+              page={page}
+              onChange={setPage}
+              color="primary"
+            />
+          </div>
+        </CardBody>
+      </Card>
 
-      <Button onClick={openCategoryModal} color="success" className="mt-4">
-        Добавить предмет <TbCategoryPlus className="ml-2" />
-      </Button>
-
+      {/* Модальные окна */}
       <Modal isOpen={isCategoryModalOpen} onClose={closeCategoryModal}>
         <ModalContent>
-          <ModalHeader>{editingCategoryId ? "Редактировать предмет" : "Создать предмет"}</ModalHeader>
-          <ModalBody>
+          <ModalHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+            {editingCategoryId ? "Редактировать предмет" : "Создать предмет"}
+          </ModalHeader>
+          <ModalBody className="p-6">
             <Input
               label="Название предмета"
               value={editingCategoryId ? editCategoryName : newCategoryName}
               onChange={(e) =>
                 editingCategoryId ? setEditCategoryName(e.target.value) : setNewCategoryName(e.target.value)
               }
+              variant="bordered"
             />
           </ModalBody>
           <ModalFooter>
-            <Button auto onClick={editingCategoryId ? handleUpdateCategory : handleCreateCategory}>
-              {editingCategoryId ? "Сохранить изменения" : "Создать предмет"}
+            <Button
+              color="primary"
+              onClick={editingCategoryId ? handleUpdateCategory : handleCreateCategory}
+              endContent={editingCategoryId ? <FaCheckCircle /> : <RiAddLine />}
+            >
+              {editingCategoryId ? "Сохранить" : "Создать"}
             </Button>
-            <Button auto flat color="error" onClick={closeCategoryModal}>
+            <Button color="default" variant="flat" onClick={closeCategoryModal}>
               Отмена
             </Button>
           </ModalFooter>
@@ -250,34 +388,56 @@ export const CategorySubcategoryPage = () => {
 
       <Modal isOpen={isSubcategoryModalOpen} onClose={closeSubcategoryModal}>
         <ModalContent>
-          <ModalHeader>{editingSubcategoryId ? "Редактировать тему" : "Создать тему"}</ModalHeader>
-          <ModalBody>
+          <ModalHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+            {editingSubcategoryId ? "Редактировать тему" : "Создать тему"}
+          </ModalHeader>
+          <ModalBody className="p-6">
             <Input
               label="Название темы"
               value={editingSubcategoryId ? editSubcategoryName : newSubcategoryName}
               onChange={(e) =>
                 editingSubcategoryId ? setEditSubcategoryName(e.target.value) : setNewSubcategoryName(e.target.value)
               }
+              variant="bordered"
             />
           </ModalBody>
           <ModalFooter>
-            <Button auto onClick={editingSubcategoryId ? handleUpdateSubcategory : handleCreateSubcategory}>
-              {editingSubcategoryId ? "Сохранить изменения" : "Создать тему"}
+            <Button
+              color="primary"
+              onClick={editingSubcategoryId ? handleUpdateSubcategory : handleCreateSubcategory}
+              endContent={editingSubcategoryId ? <FaCheckCircle /> : <RiAddLine />}
+            >
+              {editingSubcategoryId ? "Сохранить" : "Создать"}
             </Button>
-            <Button auto flat color="error" onClick={closeSubcategoryModal}>
+            <Button color="default" variant="flat" onClick={closeSubcategoryModal}>
               Отмена
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
-      <style jsx="true">{`
-        .subcategory-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 10px;
-        }
-      `}</style>
+      <Modal isOpen={isDeleteModalOpen} onClose={closeDeleteModal}>
+        <ModalContent>
+          <ModalHeader className="bg-gradient-to-r from-red-500 to-pink-500 text-white">
+            Подтверждение удаления
+          </ModalHeader>
+          <ModalBody className="p-6">
+            <p className="text-lg">
+              Вы уверены, что хотите удалить {itemToDelete?.type === 'category' ? 'предмет' : 'тему'}?
+              <br />
+              Это действие нельзя отменить.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button color="danger" onClick={handleDeleteConfirmation} endContent={<RiDeleteBinLine />}>
+              Удалить
+            </Button>
+            <Button color="default" variant="flat" onClick={closeDeleteModal}>
+              Отмена
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 };

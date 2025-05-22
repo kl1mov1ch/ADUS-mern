@@ -1,6 +1,8 @@
 const { prisma } = require("../prisma/prisma-client");
+const avatarUrlHost = process.env.AVATAR_URL_HOST || 'http://localhost:3000';
 
 const UserController = {
+
     getTests: async (req, res) => {
         try {
             const user = req.user;
@@ -109,36 +111,30 @@ const UserController = {
         }
 
         try {
-            // Получение теста
             const test = await prisma.test.findUnique({
                 where: { id: testId },
                 include: { questions: true },
             });
 
-            // Проверка, существует ли тест
             if (!test) {
                 return res.status(404).json({ message: "Тест не найден." });
             }
 
-            // Подсчет баллов на основе ответов
             let totalScore = 0;
 
-            // Проходим по вопросам теста и сохраняем ответы
             for (const question of test.questions) {
                 const studentAnswer = answers[question.id]; // Получаем ответ студента на конкретный вопрос
 
-                // Проверка правильности ответа
                 const isCorrect = studentAnswer && JSON.stringify(studentAnswer) === JSON.stringify(question.correctAnswer);
                 const score = isCorrect ? 1 : 0; // Начисляем 1 балл за правильный ответ
 
                 totalScore += score;
 
-                // Сохранение ответа студента на конкретный вопрос
                 await prisma.answer.create({
                     data: {
-                        student: { connect: { id: studentId } },      // Связывание с отправившим студентом
-                        question: { connect: { id: question.id } },  // Связывание с конкретным вопросом
-                        content: studentAnswer || '',                // Сохранение ответа
+                        student: { connect: { id: studentId } },
+                        question: { connect: { id: question.id } },
+                        content: studentAnswer || '',
                     },
                 });
             }
@@ -149,7 +145,41 @@ const UserController = {
             console.error("Ошибка при отправке теста:", error.message);
             return res.status(500).json({ message: "Ошибка при отправке теста", error: error.message });
         }
-    }
+    },
+    updateAvatar: async (req, res) => {
+        const { userId } = req.body;
+
+        try {
+            const user = await prisma.user.findFirst({
+                where: { id: userId },
+            });
+
+            if (!user) {
+                return res.status(404).json({ message: "Пользователь не найден." });
+            }
+
+            if (!req.file) {
+                return res.status(400).json({ message: "Файл аватара не загружен." });
+            }
+
+            const avatarUrl = `${avatarUrlHost}/uploads/${req.file.filename}`;
+
+            const updatedUser = await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    avatarUrl,
+                },
+            });
+
+            res.status(200).json({
+                message: "Аватар успешно обновлён.",
+                user: updatedUser
+            });
+        } catch (error) {
+            console.error("Ошибка обновления аватара:", error);
+            res.status(500).json({ message: "Ошибка при обновлении аватара." });
+        }
+    },
 };
 
 module.exports = UserController;
